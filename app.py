@@ -1,72 +1,80 @@
 import streamlit as st
 from datetime import datetime, timedelta
 
-st.set_page_config(page_title="Prediction de Mickael", page_icon="🎯", layout="centered")
+# LOGIN
+def check_login(username, password):
+    return username == "Aviator26" and password == "288612bymicka"
 
-st.title("PREDICTION DE MICKAEL")
+# STRATEGIE
+def get_prediction(m1, m2, m3, heure):
+    valid = m1 > m3
 
-st.subheader("Entrer les trois derniers historiques")
+    # Prendre uniquement les chiffres après la virgule
+    after_virg_1 = int(str(m1).split('.')[-1])
+    after_virg_2 = int(str(m2).split('.')[-1])
+    after_virg_3 = int(str(m3).split('.')[-1])
 
-# Inputs pour les trois derniers multiplicateurs
-tour1 = st.text_input("1er multiplicateur (ex: 3.41)")
-tour2 = st.text_input("2ème multiplicateur (ex: 1.08)")
-tour3 = st.text_input("3ème multiplicateur (ex: 1.13)")
+    t_base = heure
+    temps_ajoute = timedelta()
 
-st.subheader("Entrer l'heure du multiplicateur de référence")
-col1, col2, col3 = st.columns(3)
-with col1:
-    heure = st.number_input("Heure", 0, 23, 10)
-with col2:
-    minute = st.number_input("Minute", 0, 59, 23)
-with col3:
-    seconde = st.number_input("Seconde", 0, 59, 31)
+    # Déterminer le temps de prédiction
+    if 0 <= after_virg_2 <= 19:
+        temps_ajoute = timedelta(minutes=5, seconds=10)
+    elif 20 <= after_virg_2 <= 39:
+        if any(x >= 50 for x in [after_virg_1, after_virg_2, after_virg_3]) and len(
+            [x for x in [after_virg_1, after_virg_2, after_virg_3] if x >= 50]) == 1:
+            temps_ajoute = timedelta(minutes=7, seconds=10)
+        else:
+            temps_ajoute = timedelta(minutes=6, seconds=10)
+    elif 10 <= after_virg_2 <= 19:
+        temps_ajoute = timedelta(minutes=5, seconds=10)
 
-def get_decimal(value):
-    try:
-        return int(str(value).split(".")[1])
-    except:
-        return 0
+    heure_prediction = t_base + temps_ajoute
 
-def is_croissant(t1, t2, t3):
-    v1 = get_decimal(t1)
-    v2 = get_decimal(t2)
-    v3 = get_decimal(t3)
-    return v1 < v2 < v3
+    # Condition spéciale
+    special_case = after_virg_1 > 50 and after_virg_2 > 50
 
-def has_above_50(t1, t2, t3):
-    v = [get_decimal(t1), get_decimal(t2), get_decimal(t3)]
-    return sum(1 for x in v if x > 50)
+    return valid, heure_prediction.time(), special_case
 
-def prediction_valid(t1, t2, t3):
-    return is_croissant(t1, t2, t3)
+# APP
+def main():
+    st.set_page_config(page_title="PREDICTION DE MICKAEL - Top Exacte", layout="centered")
+    st.title("PREDICTION DE MICKAEL - Top Exacte")
 
-def get_predictions(base_time, t1, t2, t3):
-    add_base = timedelta(minutes=5, seconds=10)
-    if has_above_50(t1, t2, t3) == 1:
-        add_base = timedelta(minutes=6, seconds=10)
-        second_pred = timedelta(minutes=7, seconds=10)
-    else:
-        second_pred = add_base + timedelta(minutes=1)
-    return [base_time + add_base, base_time + second_pred]
+    # Login
+    if "authenticated" not in st.session_state:
+        username = st.text_input("Nom utilisateur")
+        password = st.text_input("Code", type="password")
+        if st.button("Se connecter"):
+            if check_login(username, password):
+                st.session_state.authenticated = True
+                st.experimental_rerun()
+            else:
+                st.error("Nom d'utilisateur ou code incorrect.")
+        return
 
-if st.button("Prédire"):
-    if tour1 and tour2 and tour3:
-        try:
-            t1, t2, t3 = float(tour1), float(tour2), float(tour3)
-            base_time = datetime.now().replace(hour=heure, minute=minute, second=seconde, microsecond=0)
-            predictions = get_predictions(base_time, t1, t2, t3)
-            is_valid = prediction_valid(t1, t2, t3)
+    # Input
+    st.subheader("Entrer les trois derniers multiplicateurs")
+    m1 = st.number_input("Multiplicateur 1", format="%.2f")
+    m2 = st.number_input("Multiplicateur 2 (repère)", format="%.2f")
+    m3 = st.number_input("Multiplicateur 3", format="%.2f")
 
-            for p in predictions:
-                color = "red" if is_valid else "black"
-                icon = "✅" if is_valid else "❌"
-                st.markdown(f"<h3 style='color:{color}'>{icon} Prédiction : {p.strftime('%H:%M:%S')}</h3>", unsafe_allow_html=True)
+    st.subheader("Entrer l'heure du multiplicateur repère")
+    heure = st.time_input("Heure (hh:mm:ss)")
 
-            st.success("Analyse terminée !")
-        except Exception as e:
-            st.error("Erreur lors de l’analyse. Vérifiez vos entrées.")
-    else:
-        st.warning("Veuillez remplir tous les champs.")
+    if st.button("Valider la prédiction"):
+        heure_obj = datetime.combine(datetime.today(), heure)
+        valid, result_time, special = get_prediction(m1, m2, m3, heure_obj)
 
-# Bouton export (visualisation seulement)
-st.download_button("Exporter le Résultat", data="Prediction Aviator", file_name="prediction.txt")
+        st.subheader("Résultat de la prédiction")
+
+        if valid:
+            st.success(f"Heure prédite : {result_time} | Résultat attendu : X2 ou X3")
+            if special:
+                st.info("Cas spécial détecté : X5 ou X10 probable pendant cette période.")
+        else:
+            st.warning(f"Prédiction invalide : condition non respectée.")
+            st.text("Si la prédiction est incorrecte, miser sur le tour suivant : X2, X5 ou X10.")
+
+if __name__ == "__main__":
+    main()
