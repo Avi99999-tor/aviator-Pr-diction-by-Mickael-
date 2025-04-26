@@ -1,52 +1,83 @@
-import streamlit as st
-import time
+import streamlit as st from datetime import datetime, timedelta
 
-# Fonction pour calculer les prédictions
-def calcul_prédiction(multiplicateur_1, multiplicateur_2, multiplicateur_3, heure_repere):
-    # Logique de prédiction basée sur les conditions
-    # Transformation des heures et minutes en format calculable
-    heure, minute, seconde = map(int, heure_repere.split(':'))
-    
-    if multiplicateur_2 < 20:
-        prediction_time = f"{heure}:{minute + 5}:{seconde + 10}"
-        prediction_text = "Prédiction valide : X2, X3"
-    elif multiplicateur_2 >= 20 and multiplicateur_2 < 40:
-        prediction_time = f"{heure}:{minute + 6}:{seconde + 10}"
-        prediction_text = "Prédiction valide : X2, X3"
-    elif multiplicateur_1 >= 50 or multiplicateur_3 >= 50:
-        prediction_time = f"{heure}:{minute + 7}:{seconde + 10}"
-        prediction_text = "Prédiction spéciale : X5, X10"
-    else:
-        prediction_time = f"{heure}:{minute + 5}:{seconde + 10}"
-        prediction_text = "Prédiction valide : X2, X3"
-    
-    return prediction_time, prediction_text
+--- LOGIN PAGE ---
 
-# Titre de l'app
-st.title("Prédiction de Mickael - Aviator")
+def login_page(): st.title("PREDICTION DE MICKAEL") st.subheader("Connexion")
 
-# Zone de saisie pour les multiplicateurs
-multiplicateur_1 = st.number_input("Multiplicateur 1:", min_value=0.0, step=0.1)
-multiplicateur_2 = st.number_input("Multiplicateur 2 (Repère):", min_value=0.0, step=0.1)
-multiplicateur_3 = st.number_input("Multiplicateur 3:", min_value=0.0, step=0.1)
+username = st.text_input("Nom d'utilisateur")
+password = st.text_input("Code", type="password")
 
-# Zone de saisie pour l'heure du multiplicateur
-heure_repere = st.text_input("Entrer l'heure du multiplicateur (hh:mm:ss):", "10:23:31")
-
-# Bouton de validation
-if st.button("Valider la prédiction"):
-    # Affichage du message d'attente
-    with st.spinner("Prédiction en cours..."):
-        time.sleep(2)  # Temps d'attente pour simuler le calcul
-    
-    # Calcul de la prédiction
-    prediction_time, prediction_text = calcul_prédiction(multiplicateur_1, multiplicateur_2, multiplicateur_3, heure_repere)
-    
-    # Affichage des résultats
-    st.success(f"Prédiction : {prediction_time}")
-    st.write(prediction_text)
-    st.write("Si la prédiction est incorrecte, mise sur le tour suivant X2, X5, X10")
-    
-    # Option de réinitialisation
-    if st.button("Réinitialiser"):
+if st.button("Se connecter"):
+    if username == "Aviator26" and password == "288612bymicka":
+        st.session_state['logged_in'] = True
         st.experimental_rerun()
+    else:
+        st.error("Nom d'utilisateur ou mot de passe incorrect")
+
+--- PREDICTION PAGE ---
+
+def prediction_page(): st.title("Entrez les données pour la prédiction")
+
+col1, col2, col3 = st.columns(3)
+with col1:
+    multiplicateur1 = st.number_input("Multiplicateur 1", min_value=0.0, step=0.01)
+with col2:
+    multiplicateur2 = st.number_input("Multiplicateur 2 (Repère)", min_value=0.0, step=0.01)
+with col3:
+    multiplicateur3 = st.number_input("Multiplicateur 3", min_value=0.0, step=0.01)
+
+st.write("\n**Entrez l'heure du multiplicateur repère**")
+heure = st.number_input("Heure", min_value=0)
+minute = st.number_input("Minute", min_value=0)
+seconde = st.number_input("Seconde", min_value=0)
+
+if st.button("Valider les données"):
+    process_prediction(multiplicateur1, multiplicateur2, multiplicateur3, heure, minute, seconde)
+
+if st.button("Réinitialiser"):
+    for key in st.session_state.keys():
+        del st.session_state[key]
+    st.experimental_rerun()
+
+--- PROCESSING PAGE ---
+
+def process_prediction(m1, m2, m3, h, m, s): st.title("Résultat de la Prédiction")
+
+heure_repere = datetime(2024,1,1,h,m,s)
+resultat = ""
+
+# Stratégie temps
+if 0 <= m2 < 20:
+    base_minute = 5
+elif 20 <= m2 <= 39:
+    base_minute = 6
+else:
+    base_minute = 7
+
+# Condition Special
+special = False
+if m1 >= 50 and m3 >= 50:
+    special = True
+elif m1 >= 50 and m3 < 50 and 20 <= m2 <= 39:
+    base_minute = 7
+
+# Calcul du temps
+prediction_time = heure_repere + timedelta(minutes=base_minute, seconds=10)
+
+# Affichage
+if special:
+    st.success(f"Prediction Speciale entre {prediction_time.strftime('%H:%M:%S')} et {(prediction_time + timedelta(minutes=1)).strftime('%H:%M:%S')} : X5 ou X10")
+    st.warning("Attention : Intervalle special pour X5 et X10")
+else:
+    st.success(f"Prochaine prediction à {prediction_time.strftime('%H:%M:%S')} : X2 ou X3")
+
+# Avertissement
+if m1 >= 50 or m2 >= 50 or m3 >= 50:
+    st.error("ATTENTION : Présence d'un X50 ou double rose - Prédiction risquée")
+
+--- MAIN ---
+
+if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
+
+if not st.session_state['logged_in']: login_page() else: prediction_page()
+
