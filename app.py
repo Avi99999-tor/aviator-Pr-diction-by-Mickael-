@@ -1,61 +1,80 @@
 import streamlit as st
 from datetime import datetime, timedelta
 
-st.set_page_config(page_title="PREDICTION DE MICKAEL", layout="centered")
+st.set_page_config(page_title="Prédiction by Mickael", page_icon="⚡")
 
-# Login simple
-with st.sidebar:
-    st.title("Connexion")
-    username = st.text_input("Nom utilisateur")
-    code = st.text_input("Code secret", type="password")
-    if username != "Aviator26" or code != "288612bymicka":
-        st.warning("Veuillez entrer les bonnes informations.")
+# --- TITRE & LOGIN ---
+st.title("PREDICTION DE MICKAEL - Top Exacte")
+
+with st.expander("Connexion"):
+    user = st.text_input("Nom utilisateur")
+    code = st.text_input("Code", type="password")
+    if user != "Aviator26" or code != "288612bymicka":
+        st.warning("Nom ou code incorrect.")
         st.stop()
 
-# Titre principal
-st.title("PREDICTION DE MICKAEL")
-
-# Entrée des multiplicateurs
+# --- FORMULAIRE ---
 st.subheader("Entrer les 3 derniers multiplicateurs")
-m1 = st.number_input("Multiplicateur 1", step=0.01, format="%.2f")
-m2 = st.number_input("Multiplicateur 2 (repère)", step=0.01, format="%.2f")
-m3 = st.number_input("Multiplicateur 3", step=0.01, format="%.2f")
 
-# Entrée de l’heure du multiplicateur repère
-st.subheader("Entrer l'heure du multiplicateur repère")
 col1, col2, col3 = st.columns(3)
 with col1:
-    heure = st.number_input("Heure", min_value=0, max_value=23, step=1)
+    m1 = st.number_input("Multiplicateur 1", min_value=0.00, step=0.01, format="%.2f")
 with col2:
-    minute = st.number_input("Minute", min_value=0, max_value=59, step=1)
+    m2 = st.number_input("Multiplicateur 2 (repère)", min_value=0.00, step=0.01, format="%.2f")
 with col3:
-    seconde = st.number_input("Seconde", min_value=0, max_value=59, step=1)
+    m3 = st.number_input("Multiplicateur 3", min_value=0.00, step=0.01, format="%.2f")
 
-# Bouton de prédiction
-if st.button("Lancer la prédiction"):
-    valeur_apres_virgule = int(str(m2).split(".")[1][:2])
-    base_time = datetime(2023, 1, 1, heure, minute, seconde)
-    prediction_time = None
+st.subheader("Entrer l'heure du multiplicateur repère")
+
+h = st.number_input("Heure", min_value=0, max_value=23, step=1)
+mn = st.number_input("Minute", min_value=0, max_value=59, step=1)
+s = st.number_input("Seconde", min_value=0, max_value=59, step=1)
+
+# --- PRÉDICTION ---
+if st.button("Valider la prédiction"):
+
+    def get_prediction_time(rep_val, base_time):
+        if rep_val < 20:
+            return base_time + timedelta(minutes=5, seconds=10)
+        elif rep_val < 40:
+            return base_time + timedelta(minutes=6, seconds=10)
+        else:
+            return base_time + timedelta(minutes=6, seconds=10)
+
+    def get_special_time(rep_val, base_time):
+        if rep_val < 20:
+            start = base_time + timedelta(minutes=5, seconds=10)
+        else:
+            start = base_time + timedelta(minutes=6, seconds=10)
+        end = start + timedelta(minutes=1)
+        return start, end
+
+    rep_val = int(round((m2 % 1) * 100))
+    base_time = datetime(2023, 1, 1, h, mn, s)
+
     condition1 = m1 > m3
+    special_pred = False
 
-    # Détermination du délai selon la stratégie
-    if 0 <= valeur_apres_virgule <= 19:
-        prediction_time = base_time + timedelta(minutes=5, seconds=10)
-    elif 20 <= valeur_apres_virgule <= 39:
-        prediction_time = base_time + timedelta(minutes=6, seconds=10)
-        # Condition 2 : si m1 ou m2 >= 50
-        if any(float(str(m).split(".")[1][:2]) >= 50 for m in [m1, m2]):
+    if m1 >= 50 and m3 >= 50:
+        special_pred = True
+        start, end = get_special_time(rep_val, base_time)
+    elif m1 >= 50:
+        if rep_val < 20:
+            prediction_time = base_time + timedelta(minutes=6, seconds=10)
+        else:
             prediction_time = base_time + timedelta(minutes=7, seconds=10)
-    elif 10 <= valeur_apres_virgule <= 19:
-        prediction_time = base_time + timedelta(minutes=6, seconds=10)
-
-    # Page résultat
-    st.markdown("---")
-    st.header("Résultat de la prédiction")
-
-    if condition1:
-        st.success(f"Heure du prochain multiplicateur : **{prediction_time.time()}**")
-        st.info("Si la prédiction est incorrecte, miser sur **X2 X5 X10** au tour suivant.")
     else:
-        st.error("Prédiction non valide (Multiplicateur 1 doit être supérieur à Multiplicateur 3).")
-        st.info("Si la prédiction est incorrecte, miser sur **X2 X5 X10** au tour suivant.")
+        prediction_time = get_prediction_time(rep_val, base_time)
+
+    # --- AFFICHAGE ---
+    st.markdown("---")
+    if special_pred:
+        st.success(f"**PRÉDICTION SPÉCIALE : X5 X10**")
+        st.write(f"Heure : **{start.time()} à {end.time()}**")
+        st.info("Si la prédiction est incorrecte, miser X2 X5 X10 au tour suivant")
+    elif condition1:
+        st.success(f"**PRÉDICTION : X2 X3**")
+        st.write(f"Heure : **{prediction_time.time()}**")
+        st.info("Si la prédiction est incorrecte, miser X2 X5 X10 au tour suivant")
+    else:
+        st.error("Prédiction non valide (Multiplicateur 1 doit être supérieur au 3)")
