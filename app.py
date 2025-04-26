@@ -1,90 +1,52 @@
-import streamlit as st
+   import streamlit as st
 import time
 
-st.set_page_config(page_title="PREDICTION DE MICKAEL", page_icon=":rocket:", layout="centered")
-
-st.markdown("""
-    <style>
-        .main { background-color: #f0f8ff; }
-        h1 { font-size: 40px; color: #4b0082; font-weight: bold; text-align: center; }
-        .stButton>button { background-color: #4CAF50; color: white; border-radius: 12px; padding: 10px; font-size: 18px; }
-        .stButton>button:hover { background-color: #45a049; }
-        .stTextInput input, .stNumberInput input { border: 1px solid #4CAF50; }
-        .stForm label { font-size: 18px; }
-        .stMarkdown { font-size: 18px; }
-    </style>
-""", unsafe_allow_html=True)
-
-# Login
-with st.form("login_form"):
-    username = st.text_input("Nom utilisateur :")
-    code = st.text_input("Code :", type="password")
-    submit_button = st.form_submit_button("Se connecter")
-
-if submit_button:
-    if username == "Aviator26" and code == "288612bymicka":
-        st.success("Connexion réussie !")
-
-        st.title("PREDICTION DE MICKAEL")
-
-        # Inputs
-        st.subheader("Entrer les trois derniers multiplicateurs")
-        multiplicateur1 = st.number_input("Multiplicateur 1 (après virgule)", min_value=0.00, format="%.2f")
-        multiplicateur2 = st.number_input("Multiplicateur 2 - REPÈRE (après virgule)", min_value=0.00, format="%.2f")
-        multiplicateur3 = st.number_input("Multiplicateur 3 (après virgule)", min_value=0.00, format="%.2f")
-
-        st.subheader("Entrer l'heure du multiplicateur repère")
-        heure = st.number_input("Heure :", min_value=0, max_value=23)
-        minute = st.number_input("Minute :", min_value=0, max_value=59)
-        seconde = st.number_input("Seconde :", min_value=0, max_value=59)
-
-        if st.button("Prédire"):
-            with st.spinner('Calcul de la prédiction en cours...'):
-                time.sleep(2)
-
-                # STRATEGIE
-                prediction_valide = False
-                heure_ajoutee = 0
-                secondes_ajoutees = 10
-                intervalle_special = False
-
-                if multiplicateur2 < 20:
-                    heure_ajoutee = 5
-                elif 20 <= multiplicateur2 <= 39:
-                    heure_ajoutee = 6
-
-                # Vérifie condition multiplicateur1 > multiplicateur3
-                if multiplicateur1 > multiplicateur3:
-                    prediction_valide = True
-
-                # Condition spéciale
-                if multiplicateur1 >= 50 and multiplicateur3 >= 50:
-                    intervalle_special = True
-                elif multiplicateur1 >= 50 and multiplicateur3 < 50:
-                    if 20 <= multiplicateur2 <= 39:
-                        heure_ajoutee = 7
-
-                # Calcul de la nouvelle heure
-                total_seconds = (heure * 3600) + (minute * 60) + seconde
-                total_seconds += (heure_ajoutee * 60) + secondes_ajoutees
-
-                new_hour = (total_seconds // 3600) % 24
-                new_minute = (total_seconds % 3600) // 60
-                new_second = (total_seconds % 60)
-
-                # Résultats
-                st.markdown("---")
-                if prediction_valide:
-                    if intervalle_special:
-                        st.success(f"**Intervalle spécial : {new_hour:02.0f}h{new_minute:02.0f}min{new_second:02.0f}sec à {(new_minute+1)%60:02.0f}min{new_second:02.0f}sec X5 ou X10**")
-                    else:
-                        st.success(f"**Prochaine prédiction à : {new_hour:02.0f}h{new_minute:02.0f}min{new_second:02.0f}sec X2 ou X3**")
-                        st.warning("Si la prédiction est incorrecte, entrer dans le tour suivant avec X2, X5, X10.")
-                else:
-                    st.error("Prédiction invalide - Vérifiez les valeurs ou attendez une autre opportunité.")
-
-                if st.button("Réinitialiser"):
-                    st.experimental_rerun()
-
+# Fonction pour calculer les prédictions
+def calcul_prédiction(multiplicateur_1, multiplicateur_2, multiplicateur_3, heure_repere):
+    # Logique de prédiction basée sur les conditions
+    # Transformation des heures et minutes en format calculable
+    heure, minute, seconde = map(int, heure_repere.split(':'))
+    
+    if multiplicateur_2 < 20:
+        prediction_time = f"{heure}:{minute + 5}:{seconde + 10}"
+        prediction_text = "Prédiction valide : X2, X3"
+    elif multiplicateur_2 >= 20 and multiplicateur_2 < 40:
+        prediction_time = f"{heure}:{minute + 6}:{seconde + 10}"
+        prediction_text = "Prédiction valide : X2, X3"
+    elif multiplicateur_1 >= 50 or multiplicateur_3 >= 50:
+        prediction_time = f"{heure}:{minute + 7}:{seconde + 10}"
+        prediction_text = "Prédiction spéciale : X5, X10"
     else:
-        st.error("Nom utilisateur ou code incorrect.")
+        prediction_time = f"{heure}:{minute + 5}:{seconde + 10}"
+        prediction_text = "Prédiction valide : X2, X3"
+    
+    return prediction_time, prediction_text
+
+# Titre de l'app
+st.title("Prédiction de Mickael - Aviator")
+
+# Zone de saisie pour les multiplicateurs
+multiplicateur_1 = st.number_input("Multiplicateur 1:", min_value=0.0, step=0.1)
+multiplicateur_2 = st.number_input("Multiplicateur 2 (Repère):", min_value=0.0, step=0.1)
+multiplicateur_3 = st.number_input("Multiplicateur 3:", min_value=0.0, step=0.1)
+
+# Zone de saisie pour l'heure du multiplicateur
+heure_repere = st.text_input("Entrer l'heure du multiplicateur (hh:mm:ss):", "10:23:31")
+
+# Bouton de validation
+if st.button("Valider la prédiction"):
+    # Affichage du message d'attente
+    with st.spinner("Prédiction en cours..."):
+        time.sleep(2)  # Temps d'attente pour simuler le calcul
+    
+    # Calcul de la prédiction
+    prediction_time, prediction_text = calcul_prédiction(multiplicateur_1, multiplicateur_2, multiplicateur_3, heure_repere)
+    
+    # Affichage des résultats
+    st.success(f"Prédiction : {prediction_time}")
+    st.write(prediction_text)
+    st.write("Si la prédiction est incorrecte, mise sur le tour suivant X2, X5, X10")
+    
+    # Option de réinitialisation
+    if st.button("Réinitialiser"):
+        st.experimental_rerun()
