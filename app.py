@@ -12,47 +12,53 @@ def login():
         else:
             st.error("Nom d'utilisateur ou mot de passe incorrect")
 
-# --- Prediction Intervalle ---
-def predict_intervalle(m1, m2, m3, heure, minute, seconde):
-    resultats = []
+# --- Prediction Intervalle (Version Nouvelle) ---
+def predict_intervalle_schema(schema, m2, heure, minute, seconde):
+    if m2 >= 50:
+        return "Avertissement : Multiplicateur supérieur à 50. Pas de prédiction.", None, None
+
+    chiffre = int(str(m2).split(".")[1][:2])
     heure_repere = datetime.strptime(f"{heure}:{minute}:{seconde}", "%H:%M:%S")
 
-    if m1 > m3:
-        if m1 >= 50 and m3 < 50:
-            if m2 < 20:
-                prediction_time = heure_repere + timedelta(minutes=6, seconds=10)
-            elif 20 <= m2 <= 39:
-                prediction_time = heure_repere + timedelta(minutes=7, seconds=10)
-            resultats.append((prediction_time, "X2 X3", "normal"))
-        elif m1 >= 50 and m3 >= 50:
-            if m2 < 20:
-                start = heure_repere + timedelta(minutes=5, seconds=10)
-                end = heure_repere + timedelta(minutes=6, seconds=10)
-            else:
-                start = heure_repere + timedelta(minutes=6, seconds=10)
-                end = heure_repere + timedelta(minutes=7, seconds=10)
-            resultats.append(((start, end), "X5 X10", "special"))
+    if schema == "Schéma 1":
+        if 0 <= chiffre <= 19:
+            prediction_time = heure_repere + timedelta(minutes=5, seconds=10)
+        elif 20 <= chiffre <= 39:
+            prediction_time = heure_repere + timedelta(minutes=6, seconds=10)
         else:
-            if m2 < 20:
-                prediction_time = heure_repere + timedelta(minutes=5, seconds=10)
-            elif 20 <= m2 <= 39:
-                prediction_time = heure_repere + timedelta(minutes=6, seconds=10)
-            resultats.append((prediction_time, "X2 X3", "normal"))
+            return "Pas de prédiction possible avec ce chiffre après virgule.", None, None
+        type_prediction = "X2 X3 (Normal)"
+
+    elif schema == "Schéma 2":
+        if 0 <= chiffre <= 19:
+            prediction_time = heure_repere + timedelta(minutes=6, seconds=10)
+        elif 20 <= chiffre <= 39:
+            prediction_time = heure_repere + timedelta(minutes=7, seconds=10)
+        else:
+            return "Pas de prédiction possible avec ce chiffre après virgule.", None, None
+        type_prediction = "X2 X3 (Normal)"
+
+    elif schema == "Schéma 3":
+        if 0 <= chiffre <= 19:
+            prediction_time = heure_repere + timedelta(minutes=5, seconds=10)
+        elif 20 <= chiffre <= 39:
+            prediction_time = heure_repere + timedelta(minutes=6, seconds=10)
+        else:
+            return "Pas de prédiction possible avec ce chiffre après virgule.", None, None
+        type_prediction = "X5 X10 (Spécial)"
+
     else:
-        st.warning("Condition non valide : Multiplicateur 1 doit être supérieur à Multiplicateur 3.")
+        return "Schéma invalide.", None, None
 
-    return resultats
+    return None, prediction_time, type_prediction
 
-# --- Prediction Tours ---
+# --- Prediction Tours (Ancienne Version) ---
 def predict_tours(m1, m2, m3, tour2):
     chiffre1 = int(str(m1).split(".")[1][:2])
     chiffre3 = int(str(m3).split(".")[1][:2])
 
     if m1 % 2 == 0 and m3 % 2 == 0:
-        if chiffre1 < chiffre3:
-            risque = True
-        else:
-            risque = False
+        risque = chiffre1 < chiffre3
 
         ajout = []
         if 0 <= chiffre1 <= 9:
@@ -69,8 +75,6 @@ def predict_tours(m1, m2, m3, tour2):
             ajout = [6, 7, 8]
         elif 80 <= chiffre1 <= 89:
             ajout = [15, 16, 17]
-        else:
-            ajout = []
 
         if ajout:
             predictions = [f"T{tour2 + a}" for a in ajout]
@@ -93,14 +97,10 @@ def main_page():
     strategie = st.selectbox("Stratégie :", ["Top Intervalle", "Top Tours"])
 
     if strategie == "Top Intervalle":
-        st.subheader("Top Intervalle")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            m1 = st.number_input("Multiplicateur 1", step=0.01)
-        with col2:
-            m2 = st.number_input("Multiplicateur 2 (repère)", step=0.01)
-        with col3:
-            m3 = st.number_input("Multiplicateur 3", step=0.01)
+        st.subheader("Top Intervalle (Nouveau Mode)")
+        
+        schema = st.selectbox("Sélectionner le type de schéma :", ["Schéma 1", "Schéma 2", "Schéma 3"])
+        m2 = st.number_input("Multiplicateur Repéré (ex: 12.34)", step=0.01)
 
         st.header("Entrer l'heure du multiplicateur repère")
         heure = st.number_input("Heure", min_value=0, max_value=23, step=1)
@@ -108,15 +108,13 @@ def main_page():
         seconde = st.number_input("Seconde", min_value=0, max_value=59, step=1)
 
         if st.button("Calculer la Prédiction Intervalle"):
-            resultats = predict_intervalle(m1, m2, m3, heure, minute, seconde)
+            avertissement, prediction_time, type_prediction = predict_intervalle_schema(schema, m2, heure, minute, seconde)
 
-            st.success("Résultats de Prédiction Intervalle :")
-            for resultat in resultats:
-                if resultat[2] == "normal":
-                    st.write(f"Heure : **{resultat[0].strftime('%H:%M:%S')}** ({resultat[1]})")
-                elif resultat[2] == "special":
-                    start, end = resultat[0]
-                    st.write(f"Intervalle spécial : **{start.strftime('%H:%M:%S')} à {end.strftime('%H:%M:%S')}** ({resultat[1]})")
+            if avertissement:
+                st.warning(avertissement)
+            else:
+                st.success(f"Prédiction : **{prediction_time.strftime('%H:%M:%S')}** ({type_prediction})")
+                st.info("Attention : Si X50 ou plus apparaît, ne pas suivre cette prédiction. Si coupure, passer en prédiction Tours.")
 
     else:
         st.subheader("Top Tours")
