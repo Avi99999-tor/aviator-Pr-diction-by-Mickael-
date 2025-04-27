@@ -22,6 +22,8 @@ def prediction_aviator(m1, m2, m3, heure, minute, seconde):
     chiffre_virgule_3 = int(str(m3).split('.')[1]) if '.' in str(m3) else 0
 
     # --- Stratégie en fonction des intervalles de chiffres après virgule ---
+    prediction_result = []
+
     if 0 <= chiffre_virgule_1 <= 9:
         prediction_result = [
             f"T{int(m1) + 13}",
@@ -70,7 +72,7 @@ def prediction_aviator(m1, m2, m3, heure, minute, seconde):
     # --- Stratégie basée sur le numéro de tours ---
     if chiffre_virgule_1 < chiffre_virgule_3:
         return "Prédiction Risque : Multiplicateur 1 < Multiplicateur 3"
-    
+
     resultats.append(f"{' / '.join(prediction_result)} → X4 X10 X20")
 
     # --- Cas Spécial basé sur l'heure et minute ---
