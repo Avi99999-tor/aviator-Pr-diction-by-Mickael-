@@ -15,57 +15,31 @@ def login():
 # --- Prediction Function ---
 def prediction_aviator(m1, m2, m3, heure, minute, seconde):
     resultats = []
+    
+    # Calcul de l'heure
     heure_repere = datetime.strptime(f"{heure}:{minute}:{seconde}", "%H:%M:%S")
 
     # --- Prédiction basée sur les chiffres après virgule du multiplicateur ---
     chiffre_virgule_1 = int(str(m1).split('.')[1]) if '.' in str(m1) else 0
     chiffre_virgule_3 = int(str(m3).split('.')[1]) if '.' in str(m3) else 0
 
-    # --- Stratégie en fonction des intervalles de chiffres après virgule ---
+    # --- Stratégie basée sur les chiffres après virgule du multiplicateur ---
     prediction_result = []
 
     if 0 <= chiffre_virgule_1 <= 9:
-        prediction_result = [
-            f"T{int(m1) + 13}",
-            f"T{int(m2) + 13}",
-            f"T{int(m3) + 13}"
-        ]
+        prediction_result = [f"T{int(m1) + 13}", f"T{int(m2) + 13}", f"T{int(m3) + 13}"]
     elif 20 <= chiffre_virgule_1 <= 29:
-        prediction_result = [
-            f"T{int(m1) + 11}",
-            f"T{int(m2) + 11}",
-            f"T{int(m3) + 11}"
-        ]
+        prediction_result = [f"T{int(m1) + 11}", f"T{int(m2) + 11}", f"T{int(m3) + 11}"]
     elif 30 <= chiffre_virgule_1 <= 39:
-        prediction_result = [
-            f"T{int(m1) + 14}",
-            f"T{int(m2) + 14}",
-            f"T{int(m3) + 14}"
-        ]
+        prediction_result = [f"T{int(m1) + 14}", f"T{int(m2) + 14}", f"T{int(m3) + 14}"]
     elif 10 <= chiffre_virgule_1 <= 19:
-        prediction_result = [
-            f"T{int(m1) + 12}",
-            f"T{int(m2) + 12}",
-            f"T{int(m3) + 12}"
-        ]
+        prediction_result = [f"T{int(m1) + 12}", f"T{int(m2) + 12}", f"T{int(m3) + 12}"]
     elif 50 <= chiffre_virgule_1 <= 59:
-        prediction_result = [
-            f"T{int(m1) + 11}",
-            f"T{int(m2) + 11}",
-            f"T{int(m3) + 11}"
-        ]
+        prediction_result = [f"T{int(m1) + 11}", f"T{int(m2) + 11}", f"T{int(m3) + 11}"]
     elif 80 <= chiffre_virgule_1 <= 89:
-        prediction_result = [
-            f"T{int(m1) + 15}",
-            f"T{int(m2) + 15}",
-            f"T{int(m3) + 15}"
-        ]
+        prediction_result = [f"T{int(m1) + 15}", f"T{int(m2) + 15}", f"T{int(m3) + 15}"]
     elif 70 <= chiffre_virgule_1 <= 79:
-        prediction_result = [
-            f"T{int(m1) + 6}",
-            f"T{int(m2) + 6}",
-            f"T{int(m3) + 6}"
-        ]
+        prediction_result = [f"T{int(m1) + 6}", f"T{int(m2) + 6}", f"T{int(m3) + 6}"]
     elif 60 <= chiffre_virgule_1 <= 68 or 40 <= chiffre_virgule_1 <= 49 or 90 <= chiffre_virgule_1 <= 99:
         return "Aucune prédiction disponible pour cette valeur."
 
@@ -77,7 +51,6 @@ def prediction_aviator(m1, m2, m3, heure, minute, seconde):
 
     # --- Cas Spécial basé sur l'heure et minute ---
     if m1 > m3:
-        # Cas spéciaux
         if m1 >= 50 and m3 < 50:
             if m2 < 20:
                 prediction_time = heure_repere + timedelta(minutes=6, seconds=10)
@@ -94,7 +67,6 @@ def prediction_aviator(m1, m2, m3, heure, minute, seconde):
                 end = heure_repere + timedelta(minutes=7, seconds=10)
             resultats.append(((start, end), "X5 X10", "special"))
         else:
-            # Cas normal
             if m2 < 20:
                 prediction_time = heure_repere + timedelta(minutes=5, seconds=10)
                 resultats.append((prediction_time, "X2 X3", "normal"))
