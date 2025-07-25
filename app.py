@@ -1,41 +1,65 @@
 import streamlit as st
-import pytesseract
 from PIL import Image
-import io
+import pytesseract
+import re
 
-st.set_page_config(page_title="MOD10 Matches Analyzer", page_icon="⚽", layout="centered")
+# --- Functions ---
 
-st.title("MOD10 Matches Analyzer ⚽")
-st.write("Upload capture(s) and analyze Over/Under MOD10 patterns.")
-
-uploaded_files = st.file_uploader("Upload image(s)", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
-
-def extract_cotes(text):
-    import re
-    # Maka cotes Over/Under: ohatra "Over 1.17", "Under 2.33"
-    pattern = r'(Over|Under)\s+(\d+\.\d+)'
-    return re.findall(pattern, text)
-
-def mod10_from_cote(cote):
-    # Maka décimale (ohatra 1.17 → 17) dia mod10
-    dec = str(cote).split('.')[-1]
-    if dec.isdigit():
-        return int(dec) % 10
+# Extract decimal part and compute mod 10
+def extract_mod10(odd_str):
+    match = re.search(r"\d+\.(\d+)", odd_str)
+    if match:
+        decimal = match.group(1)
+        return int(decimal) % 10
     return None
 
-if uploaded_files:
-    for idx, file in enumerate(uploaded_files):
-        st.header(f"Sary {idx+1}: {file.name}")
-        image = Image.open(file)
-        st.image(image, width=300)
-        # OCR
-        text = pytesseract.image_to_string(image, lang='eng')
-        st.text_area("OCR Result", text, height=120)
-        cotes = extract_cotes(text)
-        if cotes:
-            st.write("### Cotes Over/Under & MOD10")
-            for kind, cote in cotes:
-                mod10 = mod10_from_cote(cote)
-                st.write(f"{kind} {cote} → décimale: {str(cote).split('.')[-1]} → MOD10: **{mod10}**")
+# Process image and return OCR text & mod10 value
+def process_image_mod10(image):
+    text = pytesseract.image_to_string(image)
+    odds = re.findall(r"\d+\.\d+", text)
+    if len(odds) >= 2:
+        mod_over = extract_mod10(odds[0])
+        mod_under = extract_mod10(odds[1])
+        if mod_over is not None and mod_under is not None:
+            mod_total = int(f"{mod_over}{mod_under}")
+            return mod_over, mod_under, mod_total, text
+    return None, None, None, text
+
+# --- Streamlit UI ---
+
+st.set_page_config(page_title="MOD10 OCR Comparator", layout="centered")
+st.title("🎯 MOD10 Match Pattern Detector")
+st.markdown("Téléverser deux captures d’écran avec les cotes Over 1.5 / Under 1.5 pour deux matchs virtuels.")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    img1 = st.file_uploader("📥 Capture Match 1", type=["png", "jpg", "jpeg"], key="m1")
+with col2:
+    img2 = st.file_uploader("📥 Capture Match 2", type=["png", "jpg", "jpeg"], key="m2")
+
+if img1 and img2:
+    st.markdown("## 🔍 Résultats OCR & Mod10")
+    over1, under1, mod1, text1 = process_image_mod10(Image.open(img1))
+    over2, under2, mod2, text2 = process_image_mod10(Image.open(img2))
+
+    if mod1 is not None and mod2 is not None:
+        st.markdown("### 📄 Match 1")
+        st.code(text1)
+        st.write(f"➡️ Over mod10: {over1}, Under mod10: {under1}, Total: **{mod1}**")
+
+        st.markdown("### 📄 Match 2")
+        st.code(text2)
+        st.write(f"➡️ Over mod10: {over2}, Under mod10: {under2}, Total: **{mod2}**")
+
+        # Check for match or ±1 similarity
+        if mod1 == mod2:
+            st.success(f"✅ Matchs identiques — Résultat MOD10: {mod1}")
+        elif abs(mod1 - mod2) == 1:
+            st.warning(f"⚠️ Matchs similaires (écart ±1) — {mod1} vs {mod2}")
         else:
-            st.warning("Tsy nahita cote Over/Under")
+            st.error(f"❌ Aucune correspondance MOD10 — {mod1} ≠ {mod2}")
+    else:
+        st.warning("⚠️ OCR n'a pas pu extraire correctement les cotes. Vérifiez les images.")
+else:
+    st.info("🕐 En attente des deux captures pour lancer l’analyse...")
